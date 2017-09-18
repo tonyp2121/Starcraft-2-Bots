@@ -11,6 +11,8 @@ import time
 
 _BUILD_SUPPLY_DEPOT = actions.FUNCTIONS.Build_SupplyDepot_screen.id
 _BUILD_BARRACKS = actions.FUNCTIONS.Build_Barracks_screen.id
+_BUILD_PYLON = actions.FUNCTIONS.Build_Pylon_screen.id
+_BUILD_GATEWAY = actions.FUNCTIONS.Build_Gateway_screen.id
 _NO_OP = actions.FUNCTIONS.no_op.id
 _SELECT_POINT = actions.FUNCTIONS.select_point.id
 _SELECT_ARMY = actions.FUNCTIONS.select_army.id
@@ -30,6 +32,10 @@ _TERRAN_COMMANDCENTER = 18
 _TERRAN_SUPPLYDEPOT = 19
 _TERRAN_SCV = 45
 _TERRAN_BARRACKS = 21
+_PROTOSS_PROBE = 60
+_PROTOSS_GATEWAY = 62
+_PROTOSS_PYLON = 60
+_PROTOSS_NEXUS = 59
 
 # Parameters
 
@@ -41,7 +47,7 @@ _QUEUED = [1]
 _SCREEN = [0]
 _NOADD = [0]
 
-class SimpleAgent(base_agent.BaseAgent):
+class SimpleAgentTerran(base_agent.BaseAgent):
     base_top_left = None # set as default before step loop
     supply_depot_built = False
     barracks_built = False
@@ -57,7 +63,7 @@ class SimpleAgent(base_agent.BaseAgent):
         return [x + x_distance, y + y_distance]
 
     def step(self, obs):
-        super(SimpleAgent, self).step(obs)
+        super(SimpleAgentTerran, self).step(obs)
 
         if   self.base_top_left is None:
             player_y, player_x = (obs.observation["minimap"][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
@@ -130,5 +136,43 @@ class SimpleAgent(base_agent.BaseAgent):
                     return actions.FunctionCall(_ATTACK_MINIMAP, [[1], [39,45]])
                 return actions.FunctionCall(_ATTACK_MINIMAP, [[1], [21,24]])
 
+
+        return actions.FunctionCall(_NO_OP, [])
+
+class SimpleAgentProtoss(base_agent.BaseAgent):
+    base_top_left = None
+    pylon_built = False
+    gateway_built = False
+    probe_selected = False
+
+    def transformLocation(self, x, x_distance, y, y_distance):
+        if not self.base_top_left:
+            return [x - x_distance, y - y_distance]
+        return [x + x_distance, y + y_distance]
+
+    def step(self, obs):
+        super(SimpleAgentProtoss, self).step(obs)
+        if self.base_top_left is None:
+            player_y, player_x = (obs.observation["minimap"][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
+            self.base_top_left = player_y.mean() <= 31
+
+        if not self.pylon_built:
+            if not self.probe_selected:
+                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_y, unit_x = (unit_type == _PROTOSS_PROBE).nonzero()
+
+                #target = [unit_x[0], unit_y[0]]
+                self.probe_selected = True
+
+                return actions.FunctionCall (_SELECT_POINT, [_SCREEN, [unit_x[0],unit_y[0]]])
+            elif _BUILD_PYLON in obs.observation ["available_actions"]:
+                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
+
+                target = self.transformLocation(int(unit_x.mean()), 0, int(unit_y.mean()), 20)
+
+                self.pylon_built = True
+
+                return actions.FunctionCall(_BUILD_PYLON, [_SCREEN, target])
 
         return actions.FunctionCall(_NO_OP, [])
