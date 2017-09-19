@@ -32,7 +32,7 @@ _TERRAN_COMMANDCENTER = 18
 _TERRAN_SUPPLYDEPOT = 19
 _TERRAN_SCV = 45
 _TERRAN_BARRACKS = 21
-_PROTOSS_PROBE = 60
+_PROTOSS_PROBE = 84
 _PROTOSS_GATEWAY = 62
 _PROTOSS_PYLON = 60
 _PROTOSS_NEXUS = 59
@@ -143,6 +143,7 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
     base_top_left = None
     pylon_built = False
     gateway_built = False
+    gateway_selected = False    
     probe_selected = False
 
     def transformLocation(self, x, x_distance, y, y_distance):
@@ -161,10 +162,11 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
                 unit_type = obs.observation["screen"][_UNIT_TYPE]
                 unit_y, unit_x = (unit_type == _PROTOSS_PROBE).nonzero()
 
-                #target = [unit_x[0], unit_y[0]]
+                target = [unit_x[0], unit_y[0]]
+
                 self.probe_selected = True
 
-                return actions.FunctionCall (_SELECT_POINT, [_SCREEN, [unit_x[0],unit_y[0]]])
+                return actions.FunctionCall (_SELECT_POINT, [_SCREEN, target])
             elif _BUILD_PYLON in obs.observation ["available_actions"]:
                 unit_type = obs.observation["screen"][_UNIT_TYPE]
                 unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
@@ -174,5 +176,21 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
                 self.pylon_built = True
 
                 return actions.FunctionCall(_BUILD_PYLON, [_SCREEN, target])
+
+        if not self.gateway_built:
+            if _BUILD_GATEWAY in obs.observation["available_actions"]:
+                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
+
+                target = self.transformLocation(int(unit_x.mean()), 10, int(unit_y.mean()), 20)
+
+                self.gateway_built = True
+
+                return actions.FunctionCall(_BUILD_GATEWAY, [_SCREEN, target])
+
+
+        if not self.gateway_selected
+
+
 
         return actions.FunctionCall(_NO_OP, [])
