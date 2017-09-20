@@ -1,3 +1,6 @@
+#to run type python -m pysc2.bin.agent --map Simple64 --agent pysc2.agents.simple_agent.SimpleAgent<race> --agent_race <racehere>
+# at least thats how it works for me on Windows
+
 from pysc2.agents import base_agent
 from pysc2.lib import actions
 from pysc2.lib import features
@@ -143,8 +146,10 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
     base_top_left = None
     pylon_built = False
     gateway_built = False
-    gateway_selected = False    
+    gateway_selected = False
     probe_selected = False
+    counter_for_apm = 0
+    build_gateway_attempts = 0
 
     def transformLocation(self, x, x_distance, y, y_distance):
         if not self.base_top_left:
@@ -153,43 +158,52 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
 
     def step(self, obs):
         super(SimpleAgentProtoss, self).step(obs)
-        if self.base_top_left is None:
-            player_y, player_x = (obs.observation["minimap"][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
-            self.base_top_left = player_y.mean() <= 31
+        time.sleep(.5)
+        if self.counter_for_apm == 5:   # This is to make sure its not cheating according to deepmind this should be about
+            self.counter_for_apm = 0    # 200 apm (actions per minute) which is on par with pros and advanced players.
+            if self.base_top_left is None:
+                player_y, player_x = (obs.observation["minimap"][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
+                self.base_top_left = player_y.mean() <= 31
 
-        if not self.pylon_built:
-            if not self.probe_selected:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
-                unit_y, unit_x = (unit_type == _PROTOSS_PROBE).nonzero()
+            if not self.pylon_built:
+                if not self.probe_selected:
+                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_y, unit_x = (unit_type == _PROTOSS_PROBE).nonzero()
 
-                target = [unit_x[0], unit_y[0]]
+                    target = [unit_x[0], unit_y[0]]
 
-                self.probe_selected = True
+                    self.probe_selected = True
 
-                return actions.FunctionCall (_SELECT_POINT, [_SCREEN, target])
-            elif _BUILD_PYLON in obs.observation ["available_actions"]:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
-                unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
+                    return actions.FunctionCall (_SELECT_POINT, [_SCREEN, target])
+                elif _BUILD_PYLON in obs.observation ["available_actions"]:
+                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
 
-                target = self.transformLocation(int(unit_x.mean()), 0, int(unit_y.mean()), 20)
+                    target = self.transformLocation(int(unit_x.mean()), 0, int(unit_y.mean()), 20)
 
-                self.pylon_built = True
+                    self.pylon_built = True
 
-                return actions.FunctionCall(_BUILD_PYLON, [_SCREEN, target])
+                    return actions.FunctionCall(_BUILD_PYLON, [_SCREEN, target])
+                    self.counter_for_apm = 0;
 
-        if not self.gateway_built:
-            if _BUILD_GATEWAY in obs.observation["available_actions"]:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
-                unit_y, unit_x = (unit_type == _PROTOSS_NEXUS).nonzero()
+            if not self.gateway_built:
+                if _BUILD_GATEWAY in obs.observation["available_actions"]:
+                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_y, unit_x = (unit_type == _PROTOSS_PYLON).nonzero()
 
-                target = self.transformLocation(int(unit_x.mean()), 10, int(unit_y.mean()), 20)
+                    target = self.transformLocation(int(unit_x.mean()), 10, int(unit_y.mean()), 0)
+                    if self.build_gateway_attempts > 3:
+                        self.gateway_built = True
+                    self.build_gateway_attempts += 1
+                    return actions.FunctionCall(_BUILD_GATEWAY, [_SCREEN, target])
 
-                self.gateway_built = True
+            return actions.FunctionCall(_NO_OP, [])
+        else:
+            self.counter_for_apm += 1
+            return actions.FunctionCall(_NO_OP, [])
 
-                return actions.FunctionCall(_BUILD_GATEWAY, [_SCREEN, target])
+        #   if not self.gateway_selected:
 
-
-        if not self.gateway_selected
 
 
 
