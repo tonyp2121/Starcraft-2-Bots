@@ -197,6 +197,17 @@ class SimpleAgentProtoss(base_agent.BaseAgent):
                     self.build_gateway_attempts += 1
                     return actions.FunctionCall(_BUILD_GATEWAY, [_SCREEN, target])
 
+            if not self.gateway_selected:
+                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_y, unit_x = (unit_type == _PROTOSS_GATEWAY).nonzero()
+
+                if unit_y.any():
+                    target = [int(unit_x.mean()), int(unit_y.mean())]
+
+                    self.gateway_selected = True
+
+                    return actions.FunctionCall(_SELECT_POINT, [_SCREEN, target])
+
             return actions.FunctionCall(_NO_OP, [])
         else:
             self.counter_for_apm += 1
