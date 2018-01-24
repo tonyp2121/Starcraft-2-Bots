@@ -1,0 +1,8 @@
+Notes on SC2 agents
+
+agent - the person (or in this case AI) that is playing the game
+observation - things you observe from the game
+action - thing you decide to do at a specific time.
+episode - one full training round, its usually from the start of the game til the end or when the reward is recieved
+step - Observation -> Decision -> Action
+reward - telling the ai that it did a good action as to improve that behavior
